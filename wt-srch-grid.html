@@ -1,0 +1,236 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-spinner/paper-spinner.html">
+<link rel="import" href="../iron-form/iron-form.html">
+
+<link rel="import" href="../wt-bootstrap-styles/wt-bootstrap-styles.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid-sorter.html">
+<link rel="import" href="../wt-srch-bar/wt-srch-bar.html">
+
+
+<!--
+`<my-station>` Shows the vaadin grid in action with iron-ajax against the climate api.
+In typical use, just slap some `<my-station>` anywhere you would like to put it.
+      <my-station></my-station>
+Wham! It's all awesome now!
+
+@demo /web-components/drawer-app/#/station/list  Super cool demo!!
+-->
+<dom-module id="wt-srch-grid">
+  <template>
+    <style include="bootstrap-styles">
+      :host {
+        display: block;
+        background-color: #ffffff;
+        padding: 10px;
+      }
+
+      .sortable-button {
+        float: left;
+        width: 150px;
+        height: 50px;
+        margin: 10px;
+        /*background-color: #eeeeee;*/
+        border: 1px solid #73AD21;
+        border-radius: 12px;
+        cursor: move;
+      }
+
+      .clearfix:after {
+          content: "";
+          display: table;
+          clear: both;
+      }
+
+    </style>
+
+    <iron-ajax
+      id="ajax"
+      url="{{url}}"
+      headers='{"X-Requested-With": "XMLHttpRequest"}'
+      handle-as="json"
+      headers='{"Cache-control": "no-cache"}'
+      on-response="_handleResponse"></iron-ajax>
+
+
+    <wt-srch-bar
+      id="wt-srch-bar"
+      search-label=""
+      default-srch-char-min-ajax="{{wtSrchBarCharMinAjax}}"
+      default-srch={{wtSrchBarDefaultSrch}}
+      default-srch-label={{wtSrchBarDefaultSrchLabel}}
+      filter-types-url="{{wtSrchBarFilterTypesUrl}}"
+      start-date="{{startDate}}"
+      end-date="{{endDate}}"></wt-srch-bar>
+      <div>
+          <center><paper-spinner style="" id="spinner"></paper-spinner></center>
+      </div>
+
+      <vaadin-grid aria-label="Sorting Example" items="[[data]]" multi-sort="[[multiSort]]" id="grid">
+        <template id="repeater" is="dom-repeat" items="{{columnArray}}" as="column">
+
+            <vaadin-grid-column>
+            <template class="header">
+              <vaadin-grid-sorter path="{{column.name}}" direction="{{column.sort}}">{{column.description}}</vaadin-grid-sorter>
+            </template>
+
+            <template is="dom-if" if="[[_checkHref(column.href)]]">
+                <template><a href="[[column.href]]?[[_getParams(column, item)]]" target="_blank">[[_getItemValue(column.name, item)]]</a></template>
+            </template>
+            <template is="dom-if" if="[[!_checkHref(column.href)]]">
+                <template>[[_getItemValue(column.name, item)]]</template>
+            </template>
+          </vaadin-grid-column>
+
+        </template>
+      </vaadin-grid>
+      <br>
+
+  </template>
+  <script>
+        /**
+     * @customElement
+     * @polymer
+     */
+    class WtSrchGrid extends Polymer.Element {
+      static get is() { return 'wt-srch-grid'; }
+
+
+      static get properties() {
+        return {
+            url: String,
+            uniqueName: String,
+            title: String,
+            groupBy: {
+                type: Array,
+                value: [],
+                reflectToAttribute: true
+            },
+            wtSrchBarFilterTypesUrl: String,
+            wtSrchBarDefaultSrch: String,
+            wtSrchBarDefaultSrchLabel: String,
+            wtSrchBarCharMinAjax: String,
+            columnArray: {
+                type: Array,
+                value: [],
+                reflectToAttribute: true
+            },
+            showDrillDownOrder: {
+                type: Boolean,
+                value: false
+            },
+            downloadFields: {
+                type: Object,
+                value: {}
+            },
+            startDate: String,
+            endDate: String,
+        };
+      }
+
+      constructor() {
+        super();
+        this.formLookup = [];
+
+      }
+
+
+      // Element class can define custom element reactions
+      connectedCallback() {
+        super.connectedCallback();
+        var me = this;
+        me.multiSort = true;
+
+        me.addEventListener('main-srch-field-changed', function(e){
+          //console.log(e);
+          var ajax = Polymer.dom(this.root).querySelector('#ajax');
+          var spinner = Polymer.dom(this.root).querySelector('#spinner');
+          ajax.params = e.detail.formData;
+          me.srchForm = e.detail.formData;
+          me.ajax = ajax;
+
+          me.formLookup.push(e.item);
+
+          // Abort in-flight ajax request if there is some
+          if (typeof ajax.lastRequest !== 'undefined') {
+            ajax.lastRequest.abort();
+          }
+
+          spinner.setAttribute("active", "");
+          ajax.generateRequest();
+        });
+
+        me.addEventListener('wt-srch-bar-changed', function(e){
+          //console.log(e);
+          var ajax = Polymer.dom(this.root).querySelector('#ajax');
+          var spinner = Polymer.dom(this.root).querySelector('#spinner');
+          ajax.params = e.detail.formData;
+          me.srchForm = e.detail.formData;
+          me.ajax = ajax;
+
+          me.formLookup.push(e.item);
+
+          // Abort in-flight ajax request if there is some
+          if (typeof ajax.lastRequest !== 'undefined') {
+            ajax.lastRequest.abort();
+          }
+          spinner.setAttribute("active", "");
+          ajax.generateRequest();
+        });
+
+      }
+
+      ready() {
+          super.ready();
+      }
+
+      _handleResponse(e) {
+        var me = this;
+        var config = this.mainChartConfig;
+        var i = 0;
+
+        me.data = e.detail.response.payload;
+
+        var spinner = Polymer.dom(this.root).querySelector('#spinner');
+        spinner.removeAttribute("active");
+
+      }
+
+      _checkHref(href){
+        //console.log("Href: ", href);
+        if(href.length > 0){
+            return true;
+        }
+        return false;
+      }
+
+      _getItemValue(col, item){
+        if(item !== null && typeof item != 'undefined'){
+            return item[col];
+        }
+
+
+      }
+      // TODO: URLencode the return string
+      _getParams(column, item){
+        if(item !== null && typeof item != 'undefined'){
+            var returnString = "";
+            for (var key in column.params) {
+                if (column.params.hasOwnProperty(key)) {
+                    returnString += key + "=" + item[column.params[key]] + "&";
+                    // console.log(key + "=" + column.params[key] + "&");
+                }
+            }
+            return returnString;
+        }
+      }
+
+    }
+
+    window.customElements.define(WtSrchGrid.is, WtSrchGrid);
+  </script>
+</dom-module>
