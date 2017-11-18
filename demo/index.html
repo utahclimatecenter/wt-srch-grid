@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>wt-srch-grid demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../wt-srch-grid.html">
+
+    <custom-style>
+      <style is="custom-style" include="demo-pages-shared-styles">
+
+      .centered900 {
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      </style>
+    </custom-style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered900">
+      <h3>Basic wt-srch-bar demo!</h3>
+      <demo-snippet>
+        <template>
+        <wt-srch-grid
+          id="wt-srch-grid"
+          title="wt-srch-grig example"
+          download-fields='{"name": "Name", "holiday": "Holiday", "sched_type":"Schedule Type", "lv_hours": "Leave Hours Entered"}'
+          column-array='[{
+                          "index": "index",
+                          "name": "name",
+                          "description": "Name",
+                          "href": "https:\/\/www.google.com",
+                          "params": { "programId": "pa_program_id"},
+                          "sort": "asc",
+                          "target": ""
+                        },
+                        {
+                          "index": "index",
+                          "name": "address",
+                          "description": "Address",
+                          "href": "",
+                          "sort": "asc",
+                          "target": ""
+                        }
+                        ]'
+          url="./data/flat_data.txt"
+          wt-srch-bar-filter-types-url="./data/master-combo.txt"
+          wt-srch-bar-default-srch="free-text"
+          wt-srch-bar-default-srch-label="Program Search"
+          wt-srch-bar-char-min-ajax="2">
+        </wt-srch-grid>
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>
