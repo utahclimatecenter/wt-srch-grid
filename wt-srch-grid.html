@@ -60,6 +60,7 @@ Wham! It's all awesome now!
     <wt-srch-bar
       id="wt-srch-bar"
       search-label=""
+      style="text-align: center"
       default-srch-char-min-ajax="{{wtSrchBarCharMinAjax}}"
       default-srch={{wtSrchBarDefaultSrch}}
       default-srch-label={{wtSrchBarDefaultSrchLabel}}
@@ -70,7 +71,7 @@ Wham! It's all awesome now!
           <center><paper-spinner style="" id="spinner"></paper-spinner></center>
       </div>
 
-      <vaadin-grid aria-label="Sorting Example" items="[[data]]" multi-sort="[[multiSort]]" id="grid">
+      <vaadin-grid aria-label="Sorting Example" style="height: 100%" items="[[data]]" multi-sort="[[multiSort]]" id="grid">
         <template id="repeater" is="dom-repeat" items="{{columnArray}}" as="column">
 
             <vaadin-grid-column>
@@ -79,7 +80,7 @@ Wham! It's all awesome now!
             </template>
 
             <template is="dom-if" if="[[_checkHref(column.href)]]">
-                <template><a href="[[column.href]]?[[_getParams(column, item)]]" target="_blank">[[_getItemValue(column.name, item)]]</a></template>
+                <template><a href="[[column.href]]/#/[[_getHashPath(column, item)]]" target="_self">[[_getItemValue(column.name, item)]]</a></template>
             </template>
             <template is="dom-if" if="[[!_checkHref(column.href)]]">
                 <template>[[_getItemValue(column.name, item)]]</template>
@@ -222,6 +223,25 @@ Wham! It's all awesome now!
                     returnString += key + "=" + item[column.params[key]] + "&";
                     // console.log(key + "=" + column.params[key] + "&");
                 }
+            }
+            return returnString;
+        }
+      }
+
+
+      _getHashPath(column, item){
+        if(item !== null && typeof item != 'undefined'){
+            var returnString = "";
+            var hashColumns = column.hashpath.split('#-');
+
+            for (var key in hashColumns) {
+              var val = hashColumns[key];
+              var re = new RegExp('-#', 'gi');
+              if (val.match(re)) {
+                var k = val.split('-#');
+                var val = item[k[0]];
+              }
+              returnString += val;
             }
             return returnString;
         }
