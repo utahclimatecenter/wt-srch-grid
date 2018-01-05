@@ -2,6 +2,8 @@
     "payload": [
   {
     "_id": "5a0cd08fcdda9335c05cdb7a",
+    "edit": "",
+    "delete": "hidden",
     "index": 0,
     "guid": "9cc8825d-9ef3-411b-9fc5-08f12581648e",
     "isActive": false,
@@ -47,6 +49,8 @@
   },
   {
     "_id": "5a0cd08fa4b01805164c2883",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 1,
     "guid": "60a5ab0a-6603-449f-b1fc-497e7bd95161",
     "isActive": false,
@@ -92,6 +96,8 @@
   },
   {
     "_id": "5a0cd08fa7dcb68c1336e3e3",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 2,
     "guid": "3e3ab406-0434-4675-9c30-307a6a4248c9",
     "isActive": false,
@@ -137,6 +143,8 @@
   },
   {
     "_id": "5a0cd08f0463b9026ac5d721",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 3,
     "guid": "d2e49ff5-2fe0-41e0-b510-b0d934f6af4c",
     "isActive": true,
@@ -182,6 +190,8 @@
   },
   {
     "_id": "5a0cd08f2bf9dced29bc3068",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 4,
     "guid": "1108aea3-9a52-442c-a395-206f1fdff4a4",
     "isActive": false,
@@ -227,6 +237,8 @@
   },
   {
     "_id": "5a0cd08fabfe8a04e21ea416",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 5,
     "guid": "1754a819-1345-47aa-833d-e800aca34920",
     "isActive": true,
@@ -272,6 +284,8 @@
   },
   {
     "_id": "5a0cd08f297edc5d09773b43",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 6,
     "guid": "3cdd3af5-e932-4b8b-a51e-3b2fd514c4d7",
     "isActive": true,
@@ -317,6 +331,8 @@
   },
   {
     "_id": "5a0cd08fbdfbaa8a50a921a0",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 7,
     "guid": "2947bd01-358e-4f96-b590-6684cf1e7531",
     "isActive": false,
@@ -362,6 +378,8 @@
   },
   {
     "_id": "5a0cd08f6362bf0e19a8edbf",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 8,
     "guid": "dbd76cb0-8827-4e09-82ff-130f0b3e572a",
     "isActive": false,
@@ -407,6 +425,8 @@
   },
   {
     "_id": "5a0cd08f05f3fa00c7355a12",
+    "edit": "hidden",
+    "delete": "hidden",
     "index": 9,
     "guid": "9677c8fc-7a41-4ec2-b114-b9b076c02e4d",
     "isActive": false,
