@@ -1,6 +1,10 @@
+<script src="../jquery/dist/jquery.min.js"></script>
+
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../iron-ajax/iron-ajax.html">
 <link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-form/iron-form.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-spinner/paper-spinner.html">
@@ -8,8 +12,10 @@
 
 <link rel="import" href="../wt-bootstrap-styles/wt-bootstrap-styles.html">
 <link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="../vaadin-combo-box/vaadin-combo-box.html">
 <link rel="import" href="../vaadin-grid/vaadin-grid-sorter.html">
 <link rel="import" href="../wt-srch-bar/wt-srch-bar.html">
+<link rel="import" href="../wt-vaadin-multi-combo/wt-vaadin-multi-combo.html">
 
 
 <!--
@@ -29,22 +35,105 @@ Wham! It's all awesome now!
         padding: 10px;
       }
 
-      .sortable-button {
-        float: left;
-        width: 150px;
-        height: 50px;
-        margin: 10px;
-        /*background-color: #eeeeee;*/
-        border: 1px solid #73AD21;
-        border-radius: 12px;
-        cursor: move;
-      }
-
       .clearfix:after {
           content: "";
           display: table;
           clear: both;
       }
+
+      vaadin-grid#grid {
+
+      font-family: Roboto, sans-serif;
+      --divider-color: rgba(0, 0, 0, var(--dark-divider-opacity));
+
+
+      --vaadin-grid-header-cell: {
+        height: 54px;
+        color: rgba(0, 0, 0, var(--dark-secondary-opacity));
+        font-size: 12px;
+      };
+
+      --vaadin-grid-body-cell: {
+        height: 100%;
+        color: rgba(0, 0, 0, var(--dark-primary-opacity));
+        font-size: 13px;
+      };
+
+      --vaadin-grid-body-row-hover-cell: {
+        background-color: var(--paper-grey-200);
+      };
+
+      --vaadin-grid-body-row-selected-cell: {
+        background-color: var(--paper-grey-100);
+      };
+
+      --vaadin-grid-cell: {
+        width: 100%;
+        display: inline-flex;
+        justify-content: center;
+        flex-direction: column;
+        white-space: none;   /* This is important for variable height rows & resizing */
+        overflow: hidden;
+      }
+
+    }
+
+    paper-button.submit {
+        background: #4285F4;
+        color: white;
+        margin-top: 10px 3px 3px 3px;
+    }
+
+    .block {
+      float: right;
+      box-sizing: border-box;
+    }
+
+    paper-button.cancel {
+        background: white;
+        color: gray;
+        margin-top: 10px 3px 3px 3px;
+    }
+
+    .details {
+      padding: 10px;
+      margin: 10px;
+      justify-content: flex-end;
+      align-items: center;
+      box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14);
+      font-size: 15px;
+    }
+
+    .details2 {
+      padding: 10px;
+      margin: 10px;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: 15px;
+    }
+
+    .nowrap-initial {
+      white-space: initial;
+    }
+
+    #close-dialog {
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    background: white;
+    border: 1px solid #ededed;
+    border-radius: 50%;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+    }
+
 
     </style>
 
@@ -56,6 +145,17 @@ Wham! It's all awesome now!
       headers='{"Cache-control": "no-cache"}'
       on-response="_handleResponse"></iron-ajax>
 
+    <iron-ajax
+      id="edit-ajax"
+      headers='{"X-Requested-With": "XMLHttpRequest"}'
+      handle-as="json"
+      headers='{"Cache-control": "no-cache"}'></iron-ajax>
+
+    <iron-ajax
+      id="crud-ajax"
+      headers='{"X-Requested-With": "XMLHttpRequest"}'
+      handle-as="json"
+      headers='{"Cache-control": "no-cache"}'></iron-ajax>
 
     <wt-srch-bar
       id="wt-srch-bar"
@@ -71,24 +171,85 @@ Wham! It's all awesome now!
           <center><paper-spinner style="" id="spinner"></paper-spinner></center>
       </div>
 
-      <vaadin-grid aria-label="Sorting Example" style="height: 100%" items="[[data]]" multi-sort="[[multiSort]]" id="grid">
-        <template id="repeater" is="dom-repeat" items="{{columnArray}}" as="column">
+          <paper-dialog id="addDialog" modal closed>
+              <paper-icon-button id="close-dialog" icon="close" on-click="_handleAddCancel"  title="Close"></paper-icon-button>
+            <div class="details2 clearfix">
+            <center><h2>Add Record</h2></center>
+            <br>
+            <iron-form id="srch-grid-iron-form-add">
+              <form method="get">
+                <div id="add-div"></div>
+                <template is="dom-if" if="[[_checkIfSlotExists()]]">
+                  <slot id="custom-add-expand-slot" name="custom-add-expand-slot"></slot>
+                </template>
+                <div class="block">
+                  <paper-button class="cancel" id="cancel" on-click="_handleAddCancel">Cancel</paper-button>
+                  <paper-button class="submit" id="save" on-click="_handleAdd" type="submit">Add</paper-button>
+                </div>
+                </div>
+              </form>
+            </iron-form>
+            <br>
+          </paper-dialog>
 
-            <vaadin-grid-column>
-            <template class="header">
-              <vaadin-grid-sorter path="{{column.name}}" direction="{{column.sort}}">{{column.description}}</vaadin-grid-sorter>
+          <vaadin-grid aria-label="Sorting Example" style="height: 100%" items="[[data]]" multi-sort="[[multiSort]]" id="grid">
+
+            <template class="row-details">
+            <iron-form id="srch-grid-iron-form">
+              <form method="get">
+              <div class="details clearfix">
+                <div class="row">
+                  <template is="dom-if" if="[[!_checkIfSlotExists()]]">
+                    <template id="repeater" is="dom-repeat" items="{{columnArray}}" as="column">
+                      <div class="col-md-4 nowrap-initial" id="[[column.name]]-editdiv""></div>
+                    </template>
+                  </template>
+                  <template is="dom-if" if="[[_checkIfSlotExists()]]">
+                    <slot id="custom-edit-expand-slot" name="custom-edit-expand-slot"></slot>
+                  </template>
+                </div>
+                <br>
+                <div class="block">
+                  <paper-button class="cancel" id="cancel" on-click="_handleCancel">Cancel</paper-button>
+                  <paper-button class="submit" id="save" on-click="_handleSave" type="submit">Save</paper-button>
+                </div>
+              </div>
+              </form>
+            </iron-form>
             </template>
 
-            <template is="dom-if" if="[[_checkHref(column.href)]]">
-                <template><a href="[[column.href]]/#/[[_getHashPath(column, item)]]" target="_self">[[_getItemValue(column.name, item)]]</a></template>
-            </template>
-            <template is="dom-if" if="[[!_checkHref(column.href)]]">
-                <template>[[_getItemValue(column.name, item)]]</template>
-            </template>
-          </vaadin-grid-column>
+       <!--  <template class="header">Username</template> -->
+            <template id="repeater" is="dom-repeat" items="{{columnArray}}" as="column">
 
-        </template>
-      </vaadin-grid>
+
+
+              <vaadin-grid-column>
+                <template class="header">
+                  <div id="[[column.name]]-header">
+                      <vaadin-grid-sorter  path="{{column.name}}" direction="{{column.sort}}">{{column.description}}</vaadin-grid-sorter>
+                  </div>
+                </template>
+
+                <template is="dom-if" if="[[_checkHref(column.href)]]">
+                    <template><a id="[[column.name]]-[[item.__edit_unique_id__]]" href="[[column.href]]/#/[[_getHashPath(column, item)]]" target="_self">{{_getItemValue(column.name, item)}}</a></template>
+                </template>
+                <template is="dom-if" if="[[!_checkHref(column.href)]]">
+                    <template><div id="[[column.name]]-[[item.__edit_unique_id__]]">{{_getItemValue(column.name, item)}}</div></template>
+                </template>
+              </vaadin-grid-column>
+
+            </template>
+
+            <vaadin-grid-column id="edit-button-[[item.__edit_unique_id__]]" width="40px" flex-grow="0">
+              <template class="header">
+                <paper-icon-button id="add" icon="add" hidden=[[!allowAdd]] on-click="_addClick" style="color: black; width: 25px; height: 25px; font-size: 0.8em; position: absolute; top: 0px; right: 0px;" title="Add"></paper-icon-button>
+              </template>
+              <template>
+                <paper-icon-button id="edit-[[item.__edit_unique_id__]]" icon="create" hidden=[[!item.__edit_unique_id__]] on-click="_editClick" style="width: 20px; height: 20px; font-size: 0.8em; position: absolute; top: 0px; right: 0px;" title="Edit"></paper-icon-button>
+              </template>
+            </vaadin-grid-column>
+
+          </vaadin-grid>
       <br>
 
   </template>
@@ -120,9 +281,9 @@ Wham! It's all awesome now!
                 value: [],
                 reflectToAttribute: true
             },
-            showDrillDownOrder: {
-                type: Boolean,
-                value: false
+            useSlot: {
+              type: String,
+              value: "false"
             },
             downloadFields: {
                 type: Object,
@@ -145,9 +306,11 @@ Wham! It's all awesome now!
         super.connectedCallback();
         var me = this;
         me.multiSort = true;
+        me.allowAdd = false;
 
         me.addEventListener('main-srch-field-changed', function(e){
-          //console.log(e);
+          me._closeAllExpanded();
+
           var ajax = Polymer.dom(this.root).querySelector('#ajax');
           var spinner = Polymer.dom(this.root).querySelector('#spinner');
           ajax.params = e.detail.formData;
@@ -166,7 +329,8 @@ Wham! It's all awesome now!
         });
 
         me.addEventListener('wt-srch-bar-changed', function(e){
-          //console.log(e);
+          me._closeAllExpanded();
+
           var ajax = Polymer.dom(this.root).querySelector('#ajax');
           var spinner = Polymer.dom(this.root).querySelector('#spinner');
           ajax.params = e.detail.formData;
@@ -183,10 +347,118 @@ Wham! It's all awesome now!
           ajax.generateRequest();
         });
 
+        // Take care of weird z-index problem with iron-overlay-opened and paper-dialog.
+        me.$.addDialog.addEventListener('iron-overlay-opened', function(e, a, b, c) {
+          var backdrop = $("iron-overlay-backdrop");
+            backdrop.css('z-index', 0);
+            backdrop.css('position', 'unset');
+        });
+
+        me.$.addDialog.addEventListener('iron-overlay-opened', function(e) {
+          $("iron-overlay-backdrop").css('z-index', 0);
+          $("iron-overlay-backdrop").css('position', 'unset');
+        });
+
+        //me._handleAddCancel();
+
+        // NOTE:  We need to go to Vaadin Grid 4.0 to get this event...
+        // me.addEventListener('direction-changed', function(e){
+        //   console.log("DIR CHANGED")
+        //   me._closeAllExpanded();
+        // });
+
       }
 
       ready() {
-          super.ready();
+        super.ready();
+      }
+
+      _closeAllExpanded() {
+        var me = this;
+          if (typeof me.data != 'undefined' && me.data.length > 0 && me.$.grid.expandedItems.length > 0){
+            me.model = {};
+            me.model.item = me.$.grid.expandedItems[0];
+            me._handleCancel(me);
+          }
+      }
+
+      _handleCancel(e) {
+        var me = this;
+        var idArray = me._hideShowColumns(e.model.item, "show");
+        for (var index = 0; index < me.columnArray.length; ++index) {
+          var editdiv = Polymer.dom(me.root).querySelector('#'+me.columnArray[index].name+"-editdiv");
+          if (editdiv != null && typeof editdiv !== 'undefined') {
+            while(editdiv.hasChildNodes()) {
+              editdiv.removeChild(editdiv.lastChild);
+            }
+          }
+        }
+        me.$.grid.expandedItems = [];
+        me._editButtons("show");
+      }
+
+      _handleSave(e) {
+        var me = this;
+        var form = Polymer.dom(me.root).querySelector('#srch-grid-iron-form');
+        var formData = form.serializeForm();
+
+        var ajaxData = e.model.item;
+
+        if (me.useSlot == "false") {
+          // Set items into the return object
+          //  NOTE:  Maybe loop over columnArray and only get those items from formData.
+          //  IDEA:  Maybe we have hidden items in the columnArray -- such as the id ect.
+
+          // Get rid of undefined key value pairs from grid.
+          for (var key in formData) {
+            if (typeof formData[key] != 'undefined') {
+              // Overwrite edits from the form data.
+              ajaxData[key] = formData[key];
+            }
+          }
+
+        } else {
+          var slot = Polymer.dom(me.root).querySelector('#custom-edit-expand-slot');
+          var nodes = slot.assignedNodes();
+          var form = Polymer.dom(nodes[0]).querySelector('#custom-edit-expand-slot-form');
+          var formData = form.serializeForm();
+
+          for (var key in formData) {
+            if (typeof formData[key] != 'undefined') {
+              // Overwrite edits from the form data.
+              ajaxData[key] = formData[key];
+            }
+          }
+
+          console.log("FORM DATA",formData, slot, nodes);
+          for (var i=0; i < nodes.length; i++) {
+            console.log("NODE",nodes[i]);
+          }
+
+        }
+
+        var crudAjax = Polymer.dom(me.root).querySelector('#crud-ajax');
+        crudAjax.url = me.url;
+        ajaxData['xaction'] = 'edit';
+        crudAjax.params = ajaxData;
+
+        var request = crudAjax.generateRequest();
+
+        request.completes.then(function(req) {
+            //e.model.items = req.response.payload;
+            console.log(e.model.items);
+            //me.data[req.response.payload.index] = e.model.items;
+          }, function(rejected) {
+            // failed request, argument is an object
+            let req = rejected.request;
+            let error = rejected.error;
+            console.log("FAILED",error)
+            //...
+          });
+
+        me._closeAllExpanded();
+        me.$.grid.clearCache();
+        me.$.grid._gridResizeHandler();
       }
 
       _handleResponse(e) {
@@ -196,9 +468,25 @@ Wham! It's all awesome now!
 
         me.data = e.detail.response.payload;
 
+        // Check to see if they have edit on any items in the list.
+        // If they do then set Add option on.
+        me.allowAdd = false;
+        for(var i=0; i<me.data.length; i++) {
+          if (typeof me.data[i].__edit_unique_id__ != 'undefined') {
+            me.allowAdd = true;
+          }
+        }
+
         var spinner = Polymer.dom(this.root).querySelector('#spinner');
         spinner.removeAttribute("active");
 
+      }
+
+      _checkIfSlotExists() {
+        if (this.useSlot == "true") {
+          return 1;
+        }
+        return 0;
       }
 
       _checkHref(href){
@@ -209,11 +497,304 @@ Wham! It's all awesome now!
         return false;
       }
 
+      _checkSort(sort){
+        //console.log("Href: ", href);
+        if(sorting.length > 0){
+            return true;
+        }
+        return false;
+      }
+
       _getItemValue(col, item){
         if(item !== null && typeof item != 'undefined'){
             return item[col];
         }
       }
+
+      _hideShowColumns(item, action) {
+        var idArray = this._getUniqueColumnIds(this.columnArray,item);
+
+        for (var index = 0; index < idArray.length; ++index) {
+          var col = Polymer.dom(this.root).querySelector('#'+idArray[index]);
+          if (action == "hide") {
+            col.hidden = true;
+          } else {
+            col.hidden = false;
+          }
+
+        }
+        return idArray;
+      }
+
+      _editButtons(action) {
+        var me = this;
+        for (var index = 0; index < me.data.length; ++index) {
+          var editBtn = Polymer.dom(me.root).querySelector("#edit-"+me.data[index].__edit_unique_id__);
+          if (editBtn != null && typeof editBtn !== 'undefined') {
+            if (action == "hide") {
+              editBtn.hidden = true;
+            } else {
+              editBtn.hidden = false;
+            }
+          }
+        }
+      }
+
+      _handleAddCancel() {
+        var dialog = Polymer.dom(this.root).querySelector("#addDialog");
+        dialog.close();
+      }
+
+      _closeDialog() {
+        var dialog = Polymer.dom(this.root).querySelector("#addDialog");
+        dialog.close();
+      }
+
+      _handleAdd(e) {
+        var me = this;
+
+
+        if (me.useSlot == "false") {
+          var form = Polymer.dom(me.root).querySelector('#srch-grid-iron-form-add');
+          var formData = form.serializeForm();
+
+          var ajaxData = formData;
+          // Set items into the return object
+          //  NOTE:  Maybe loop over columnArray and only get those items from formData.
+          //  IDEA:  Maybe we have hidden items in the columnArray -- such as the id ect.
+
+          // Get rid of undefined key value pairs from grid.
+          for (var key in formData) {
+            if (typeof formData[key] != 'undefined') {
+              // Overwrite edits from the form data.
+              ajaxData[key] = formData[key];
+            }
+          }
+        } else {
+          var slot = Polymer.dom(me.root).querySelector('#custom-add-expand-slot');
+          var nodes = slot.assignedNodes();
+          var form = Polymer.dom(nodes[0]).querySelector('#custom-add-expand-slot-form');
+          var formData = form.serializeForm();
+
+          var ajaxData = formData;
+
+          console.log("FORM DATA",formData, slot, nodes);
+          for (var i=0; i < nodes.length; i++) {
+            console.log("NODE",nodes[i]);
+          }
+
+        }
+
+        var crudAjax = Polymer.dom(me.root).querySelector('#crud-ajax');
+        crudAjax.url = me.url;
+        ajaxData['xaction'] = 'add';
+        crudAjax.params = ajaxData;
+
+        var request = crudAjax.generateRequest();
+
+        request.completes.then(function(req) {
+            //e.model.items = req.response.payload;
+            console.log(req);
+            me._closeDialog();
+            //me.data[req.response.payload.index] = e.model.items;
+          }, function(rejected) {
+            // failed request, argument is an object
+            let req = rejected.request;
+            let error = rejected.error;
+            console.log("FAILED",error)
+            //...
+          });
+
+        me._closeAllExpanded();
+        me.$.grid.clearCache();
+        me.$.grid._gridResizeHandler();
+      }
+
+      _addClick(e) {
+        var me = this;
+
+        var dialog = Polymer.dom(me.root).querySelector("#addDialog");
+        var addDiv = Polymer.dom(me.root).querySelector('#add-div');
+        //$(dialog).css('z-index', 3000);
+        dialog.open();
+
+        while(addDiv.hasChildNodes()) {
+          addDiv.removeChild(addDiv.lastChild);
+        }
+
+        if (me.useSlot == "false") {
+
+          //me._editButtons("hide");
+          for (var index = 0; index < me.columnArray.length; ++index) {
+            var item = [{}];
+            var input = me._createInputObj(index, addDiv, item, false);
+          }
+        } else {
+          var slot = Polymer.dom(me.root).querySelector('#custom-add-expand-slot');
+          var slotNodes = slot.assignedNodes();
+
+          for (var index = 0; index < me.columnArray.length; ++index) {
+            var editObj = Polymer.dom(slotNodes[0]).querySelector('#'+me.columnArray[index].name);
+            if (me.columnArray[index].edit_type == "multi-combo") {
+              editObj._clearAllItems();
+            }
+            if (typeof me.columnArray[index].edit_type_url != 'undefined') {
+              me._generateComboRequest(editObj, index, null, item, false);
+            }
+          }
+        }
+      }
+
+      _editClick(e){
+        var me = this;
+        var item = e.model.item;
+
+        // First, hide all other edit buttons
+        me._editButtons("hide");
+        // Expand this row.
+
+        me.$.grid.expandedItems = [item];
+        var idArray = me._hideShowColumns(item, "hide");
+
+        if (me.useSlot == "false") {
+          // No custom expand slot found.
+          // Lets add & layout the form ourselves -- based on the columnArray info
+          for (var index = 0; index < me.columnArray.length; ++index) {
+
+                var editdiv = Polymer.dom(me.root).querySelector('#'+me.columnArray[index].name+"-editdiv");
+
+                // Add css bootstrap class if it exists
+                if (typeof me.columnArray[index].edit_bootstrap_class != 'undefined') {
+                  $(editdiv).removeClass("col-md-4");
+                  $(editdiv).addClass(me.columnArray[index].edit_bootstrap_class);
+                }
+                me._createInputObj(index, editdiv, item, true);
+          }
+        } else {
+          // Use the custom slot that they have provided.
+          me.$.grid.expandedItems = [item];
+          var slot = Polymer.dom(me.root).querySelector('#custom-edit-expand-slot');
+          var slotNodes = slot.assignedNodes();
+          for (var index = 0; index < me.columnArray.length; ++index) {
+            var editObj = Polymer.dom(slotNodes[0]).querySelector('#'+me.columnArray[index].name);
+            editObj.value = item[me.columnArray[index].name];
+            if (me.columnArray[index].edit_type == "multi-combo") {
+              editObj._clearAllItems();
+            }
+            if (typeof me.columnArray[index].edit_type_url != 'undefined') {
+              me._generateComboRequest(editObj, index, null, item, false);
+            }
+          }
+        }
+
+        var grid = Polymer.dom(me.root).querySelector('#grid');
+        grid._gridResizeHandler();
+      }
+
+      _createInputObj(index, editdiv, item, preload) {
+        var me = this;
+              switch(me.columnArray[index].edit_type) {
+                  case 'multi-combo':
+                      var combo = document.createElement('wt-vaadin-multi-combo');
+                      combo.label = "Select "+me.columnArray[index].description+"(s)";
+                      combo.name = me.columnArray[index].name;
+                      me._generateComboRequest(combo, index, editdiv, item, preload);
+                      combo.addEventListener('value-changed', function(e) {
+                        var grid = Polymer.dom(me.root).querySelector('#grid');
+                        grid._gridResizeHandler();
+                      });
+                      break;
+                  case 'combo':
+                      var combo = document.createElement('vaadin-combo-box');
+                      combo.label = "Select "+me.columnArray[index].description+"";
+                      combo.name = me.columnArray[index].name;
+                      me._generateComboRequest(combo, index, editdiv, item, preload);
+                      break;
+                  case 'input':
+                      var input = document.createElement('paper-input');
+                      input.label = "Enter "+me.columnArray[index].description+"";
+                      input.name = me.columnArray[index].name;
+                      if (preload) {
+                          input.value = item[me.columnArray[index].name];
+                      }
+                      $(editdiv).append(input);
+                      break;
+                  case 'textarea':
+                      var input = document.createElement('paper-textarea');
+                      input.label = "Enter "+me.columnArray[index].description+"";
+                      input.name = me.columnArray[index].name;
+                      if (preload) {
+                        input.value = item[me.columnArray[index].name];
+                      }
+                      break;
+                  default:
+                      var input = document.createElement('paper-input');
+                      input.readonly = true;
+                      input.label = "Enter "+me.columnArray[index].description+"";
+                      input.name = me.columnArray[index].name;
+                      if (preload) {
+                        input.value = item[me.columnArray[index].name];
+                      }
+                      $(editdiv).append(input);
+              }
+              if (typeof input === 'undefined') {
+                return combo;
+              }
+              return input;
+      }
+
+      _generateComboRequest(combo, index, editdiv, item, preload) {
+        var me = this;
+        var editAjax = Polymer.dom(me.root).querySelector('#edit-ajax');
+        editAjax.url = me.columnArray[index].edit_type_url;
+
+        //if (typeof me.columnArray[index].comboItems == 'undefined') {
+          var request = editAjax.generateRequest();
+
+          request.completes.then(function(req) {
+              combo.itemLabelPath = "label";
+              combo.itemValuePath = "value";
+              combo.style = "padding: 3px 3px 20px 3px; white-space: none;"
+              combo.items = req.response.payload;
+              if (preload) {
+                combo.value = item[me.columnArray[index].name];
+              }
+              me.columnArray[index].comboItems = combo.items;
+              if (me.useSlot == "false") {
+                $(editdiv).append(combo);
+              }
+            }, function(rejected) {
+              // failed request, argument is an object
+              let req = rejected.request;
+              let error = rejected.error;
+              console.log("FAILED",error)
+              //...
+            }
+          );
+        // } else {
+        //   // Get the cached lookup.
+        //   combo.itemLabelPath = "label";
+        //   combo.itemValuePath = "value";
+        //   combo.style = "padding: 3px 3px 20px 3px; white-space: none;";
+        //   combo.items = me.columnArray[index].comboItems;
+        //   combo.value = item[me.columnArray[index].name];
+        //   if (me.useSlot == "false") {
+        //     $(editdiv).append(combo);
+        //   }
+        // }
+
+      }
+
+      _getUniqueColumnIds(columnArray,item) {
+        var uniqueColumnIds = [];
+        for (var index = 0; index < columnArray.length; ++index) {
+            uniqueColumnIds.push(columnArray[index].name+"-"+item.__edit_unique_id__);
+        }
+        //Also push on the edit button
+        uniqueColumnIds.push("edit-"+item.__edit_unique_id__)
+        return uniqueColumnIds;
+      }
+
       // TODO: URLencode the return string
       _getParams(column, item){
         if(item !== null && typeof item != 'undefined'){

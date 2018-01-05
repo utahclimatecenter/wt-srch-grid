@@ -25,7 +25,7 @@
   </head>
   <body>
     <div class="vertical-section-container centered900">
-      <h3>Basic wt-srch-bar demo!</h3>
+      <h3>Basic wt-srch-bar demo</h3>
       <demo-snippet>
         <template>
         <wt-srch-grid
@@ -55,6 +55,113 @@
           wt-srch-bar-default-srch="free-text"
           wt-srch-bar-default-srch-label="Program Search"
           wt-srch-bar-char-min-ajax="2">
+        </wt-srch-grid>
+        </template>
+      </demo-snippet>
+
+      <h3>Editable wt-srch-bar Demo</h3>
+      <demo-snippet>
+        <template>
+        <wt-srch-grid
+          id="wt-srch-grid"
+          title="Search Grid Example"
+          use-slot="false"
+          column-array='[{
+                          "name": "address",
+                          "description": "Report Name",
+                          "href": "web-components/wt-app-route-starter",
+                          "hashpath": "main/report-view1/#-_id-#",
+                          "edit_bootstrap_class": "col-md-4",
+                          "edit_type": "input"
+                        },
+                        {
+                          "name": "guid",
+                          "description": "Guid",
+                          "href": "",
+                          "edit_bootstrap_class": "col-md-4",
+                          "edit_type": "combo",
+                          "edit_type_url": "/web-components/wt-app-route-starter/src/data/get-states-data.txt"
+                        },{
+                          "name": "_id",
+                          "description": "ID",
+                          "href": "",
+                          "edit_bootstrap_class": "col-md-4",
+                          "edit_type": "multi-combo",
+                          "edit_type_url": "/web-components/wt-app-route-starter/src/data/get-states-data.txt"
+                        }]'
+          url="/web-components/wt-app-route-starter/src/data/flat_data.txt"
+          wt-srch-bar-filter-types-url="/web-components/wt-app-route-starter/src/data/master-combo.txt"
+          wt-srch-bar-default-srch="free-text"
+          wt-srch-bar-default-srch-label="Program Search"
+          wt-srch-bar-char-min-ajax="2">
+        </wt-srch-grid>
+        </template>
+      </demo-snippet>
+
+      <h3>Editable wt-srch-bar Demo (Using custom edit/add Slots)</h3>
+      <demo-snippet>
+        <template>
+        <wt-srch-grid
+          id="wt-srch-grid"
+          title="Search Grid Example"
+          use-slot="true"
+          column-array='[{
+                          "name": "address",
+                          "description": "Report Name",
+                          "href": "web-components/wt-app-route-starter",
+                          "hashpath": "main/report-view1/#-_id-#",
+                          "edit_bootstrap_class": "col-md-4",
+                          "edit_type": "input"
+                        },
+                        {
+                          "name": "guid",
+                          "description": "Guid",
+                          "href": "",
+                          "edit_bootstrap_class": "col-md-4",
+                          "edit_type": "combo",
+                          "edit_type_url": "/web-components/wt-app-route-starter/src/data/get-states-data.txt"
+                        },{
+                          "name": "_id",
+                          "description": "ID",
+                          "href": "",
+                          "edit_bootstrap_class": "col-md-4",
+                          "edit_type": "multi-combo",
+                          "edit_type_url": "/web-components/wt-app-route-starter/src/data/get-states-data.txt"
+                        }]'
+          url="/web-components/wt-app-route-starter/src/data/flat_data.txt"
+          wt-srch-bar-filter-types-url="/web-components/wt-app-route-starter/src/data/master-combo.txt"
+          wt-srch-bar-default-srch="free-text"
+          wt-srch-bar-default-srch-label="Program Search"
+          wt-srch-bar-char-min-ajax="2">
+
+            <div slot="custom-edit-expand-slot">
+              <iron-form id="custom-edit-expand-slot-form">
+              <form method="get">
+              <table border="1px" width="100%">
+                <tr>
+                  <td><input id="address" name="address"></input></td>
+                  <td><vaadin-combo-box id="guid" name="guid"></vaadin-combo-box></td>
+                  <td><wt-vaadin-multi-combo id="_id" name="_id"></wt-vaadin-multi-combo></td>
+                </tr>
+              </table>
+              </form>
+              </iron-form>
+            </div>
+
+            <div slot="custom-add-expand-slot">
+              <iron-form id="custom-add-expand-slot-form">
+              <form method="get">
+              <table border="1px" width="100%">
+                <tr>
+                  <td><input id="address" name="address"></input></td>
+                  <td><vaadin-combo-box id="guid" name="guid"></vaadin-combo-box></td>
+                  <td><wt-vaadin-multi-combo id="_id" name="_id"></wt-vaadin-multi-combo></td>
+                </tr>
+              </table>
+              </form>
+              </iron-form>
+            </div>
+
         </wt-srch-grid>
         </template>
       </demo-snippet>
