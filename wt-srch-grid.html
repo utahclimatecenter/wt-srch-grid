@@ -811,6 +811,7 @@ Wham! It's all awesome now!
 
 
       _getHashPath(column, item){
+	if(typeof column.hashpath != 'undefined') {
         if(item !== null && typeof item != 'undefined'){
             var returnString = "";
             var hashColumns = column.hashpath.split('#-');
@@ -825,6 +826,7 @@ Wham! It's all awesome now!
               returnString += val;
             }
             return returnString;
+        }
         }
       }
 
