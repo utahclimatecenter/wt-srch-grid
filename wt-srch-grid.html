@@ -85,8 +85,22 @@ Wham! It's all awesome now!
         margin-top: 10px 3px 3px 3px;
     }
 
-    .block {
+    paper-button.delete {
+    /*    background: #f7cdcd;*/
+/*        background: #F93C11;
+        color: white;*/
+        background: white;
+        color: gray;
+        margin-top: 10px 3px 3px 3px;
+    }
+
+    .block-right {
       float: right;
+      box-sizing: border-box;
+    }
+
+    .block-left {
+      float: left;
       box-sizing: border-box;
     }
 
@@ -95,6 +109,15 @@ Wham! It's all awesome now!
         color: gray;
         margin-top: 10px 3px 3px 3px;
     }
+
+    paper-dialog.colored {
+      border: 2px solid;
+      border-color: #ff0000;
+      background-color: #f7cdcd;
+      color: #ff0000;
+      width: 350px;
+    }
+
 
     .details {
       padding: 10px;
@@ -193,7 +216,7 @@ Wham! It's all awesome now!
             <br>
           </paper-dialog>
 
-          <vaadin-grid aria-label="Sorting Example" style="height: 100%" items="[[data]]" multi-sort="[[multiSort]]" id="grid">
+          <vaadin-grid aria-label="Sorting Example" items="[[data]]" style="height: [[height]]" multi-sort="[[multiSort]]" id="grid">
 
             <template class="row-details">
             <iron-form id="srch-grid-iron-form">
@@ -210,7 +233,10 @@ Wham! It's all awesome now!
                   </template>
                 </div>
                 <br>
-                <div class="block">
+                <div class="block-left">
+                <paper-button class="delete" id="save" class="clearfix" on-click="_areYouSure" type="submit">Delete</paper-button>
+                </div>
+                <div class="block-right">
                   <paper-button class="cancel" id="cancel" on-click="_handleCancel">Cancel</paper-button>
                   <paper-button class="submit" id="save" on-click="_handleSave" type="submit">Save</paper-button>
                 </div>
@@ -232,10 +258,10 @@ Wham! It's all awesome now!
                 </template>
 
                 <template is="dom-if" if="[[_checkHref(column.href)]]">
-                    <template><a id="[[column.name]]-[[item.__edit_unique_id__]]" href="[[column.href]]/#/[[_getHashPath(column, item)]]" target="_self">{{_getItemValue(column.name, item)}}</a></template>
+                    <template><a title="" id="[[column.name]]-[[item.__edit_unique_id__]]" href="[[column.href]]/#/[[_getHashPath(column, item)]]" target="_self">{{_getItemValue(column, item)}}</a></template>
                 </template>
                 <template is="dom-if" if="[[!_checkHref(column.href)]]">
-                    <template><div id="[[column.name]]-[[item.__edit_unique_id__]]">{{_getItemValue(column.name, item)}}</div></template>
+                    <template><div title="" id="[[column.name]]-[[item.__edit_unique_id__]]">{{_getItemValue(column, item)}}</div></template>
                 </template>
               </vaadin-grid-column>
 
@@ -253,6 +279,22 @@ Wham! It's all awesome now!
           </vaadin-grid>
       <br>
 
+      <paper-dialog id="errorDialog" class="colored" closed>
+        <paper-icon-button id="close-dialog" icon="close" on-click="_handleErrClose"  title="Close"></paper-icon-button>
+        <center><h2>ERROR</h2></center>
+        <div id="error-content"></div>
+      </paper-dialog>
+
+      <paper-dialog id="areYouSureDialog" modal closed>
+        <paper-icon-button id="close-dialog" icon="close" on-click="_handleAreYouSureCancel"  title="Yes"></paper-icon-button>
+        <center><h2>Are you Sure?</h2></center>
+        <div id="are-you-sure-content" class="details2 clearfix"></div>
+        <div class="block-right">
+          <paper-button class="cancel" id="cancel" on-click="_handleAreYouSureCancel">No</paper-button>
+          <paper-button class="submit" id="save" on-click="_handleAreYouSureSave" type="submit">Yes</paper-button>
+        </div>
+      </paper-dialog>
+
   </template>
   <script>
         /**
@@ -266,8 +308,16 @@ Wham! It's all awesome now!
       static get properties() {
         return {
             url: String,
+            autoLoadUrl: {
+              type: String,
+              value: "false"
+            },
             uniqueName: String,
             title: String,
+            gridHeight: {
+              type: String,
+              value: "600px"
+            },
             groupBy: {
                 type: Array,
                 value: [],
@@ -286,10 +336,6 @@ Wham! It's all awesome now!
               type: String,
               value: "false"
             },
-            downloadFields: {
-                type: Object,
-                value: {}
-            },
             startDate: String,
             endDate: String,
         };
@@ -306,46 +352,32 @@ Wham! It's all awesome now!
       connectedCallback() {
         super.connectedCallback();
         var me = this;
+        var srchBar = Polymer.dom(this.root).querySelector('#wt-srch-bar');
         me.multiSort = true;
         me.allowAdd = false;
 
+        if (me.gridHeight == "dynamic") {
+          me._resize(true);
+        }
+
+        $(window).resize(function() {
+          // 1)  Get the width of the sreen
+          // 2)  If minimum size of grid is not fitting drop off columns in the grid
+          me._resize(true);
+        });
+
+
+        if (me.autoLoadUrl == "true") {
+          me._generateMainUrlAjax();
+        }
+
         me.addEventListener('main-srch-field-changed', function(e){
-          me._closeAllExpanded();
-
-          var ajax = Polymer.dom(this.root).querySelector('#ajax');
-          var spinner = Polymer.dom(this.root).querySelector('#spinner');
-          ajax.params = e.detail.formData;
-          me.srchForm = e.detail.formData;
-          me.ajax = ajax;
-
-          me.formLookup.push(e.item);
-
-          // Abort in-flight ajax request if there is some
-          if (typeof ajax.lastRequest !== 'undefined') {
-            ajax.lastRequest.abort();
-          }
-
-          spinner.setAttribute("active", "");
-          ajax.generateRequest();
+          me._generateMainUrlAjax(e);
         });
 
         me.addEventListener('wt-srch-bar-changed', function(e){
-          me._closeAllExpanded();
-
-          var ajax = Polymer.dom(this.root).querySelector('#ajax');
-          var spinner = Polymer.dom(this.root).querySelector('#spinner');
-          ajax.params = e.detail.formData;
-          me.srchForm = e.detail.formData;
-          me.ajax = ajax;
-
-          me.formLookup.push(e.item);
-
-          // Abort in-flight ajax request if there is some
-          if (typeof ajax.lastRequest !== 'undefined') {
-            ajax.lastRequest.abort();
-          }
-          spinner.setAttribute("active", "");
-          ajax.generateRequest();
+          me._generateMainUrlAjax(e);
+          me._resize(true);
         });
 
         // Take care of weird z-index problem with iron-overlay-opened and paper-dialog.
@@ -359,6 +391,30 @@ Wham! It's all awesome now!
           $("iron-overlay-backdrop").css('z-index', 0);
           $("iron-overlay-backdrop").css('position', 'unset');
         });
+
+        // Take care of weird z-index problem with iron-overlay-opened and paper-dialog.
+        me.$.areYouSureDialog.addEventListener('iron-overlay-opened', function(e, a, b, c) {
+          var backdrop = $("iron-overlay-backdrop");
+            backdrop.css('z-index', 0);
+            backdrop.css('position', 'unset');
+        });
+
+        me.$.areYouSureDialog.addEventListener('iron-overlay-opened', function(e) {
+          $("iron-overlay-backdrop").css('z-index', 0);
+          $("iron-overlay-backdrop").css('position', 'unset');
+        });
+
+                // Take care of weird z-index problem with iron-overlay-opened and paper-dialog.
+        // me.$.errorDialog.addEventListener('iron-overlay-opened', function(e, a, b, c) {
+        //   var backdrop = $("iron-overlay-backdrop");
+        //     backdrop.css('z-index', 0);
+        //     backdrop.css('position', 'unset');
+        // });
+
+        // me.$.errorDialog.addEventListener('iron-overlay-opened', function(e) {
+        //   $("iron-overlay-backdrop").css('z-index', 0);
+        //   $("iron-overlay-backdrop").css('position', 'unset');
+        // });
 
         //me._handleAddCancel();
 
@@ -374,6 +430,45 @@ Wham! It's all awesome now!
         super.ready();
       }
 
+      _resize(reload) {
+        var me = this;
+        if (me.gridHeight == "dynamic") {
+          // Set the height to take the full size of the window minus the header.
+          me.height = $(window).height();
+          me.header = me.$.grid.getBoundingClientRect().top;
+          me.gridSize = parseInt(me.height)- me.header - 50;
+          me.$.grid.style = "height: "+ me.gridSize+"px";
+          me.$.grid.clearCache();
+          me.$.grid._gridResizeHandler();
+        } else {
+          me.height = me.gridHeight;
+        }
+      }
+
+      _generateMainUrlAjax(e) {
+        var me = this;
+        var ajax = Polymer.dom(this.root).querySelector('#ajax');
+        var spinner = Polymer.dom(this.root).querySelector('#spinner');
+        me._closeAllExpanded();
+
+        if (typeof e !== 'undefined') {
+          ajax.params = e.detail.formData;
+          me.srchForm = e.detail.formData;
+          me.formLookup.push(e.item);
+        }
+
+        ajax.params['xaction'] = "get-grid-data";
+        me.ajax = ajax;
+
+        // Abort in-flight ajax request if there is some
+        if (typeof ajax.lastRequest !== 'undefined') {
+          ajax.lastRequest.abort();
+        }
+
+        spinner.setAttribute("active", "");
+        ajax.generateRequest();
+      }
+
       _closeAllExpanded() {
         var me = this;
           if (typeof me.data != 'undefined' && me.data.length > 0 && me.$.grid.expandedItems.length > 0){
@@ -381,6 +476,15 @@ Wham! It's all awesome now!
             me.model.item = me.$.grid.expandedItems[0];
             me._handleCancel(me);
           }
+      }
+
+      _handleAreYouSureCancel(e) {
+        this.$.areYouSureDialog.close();
+      }
+
+      _handleAreYouSureSave(e) {
+        var me = this;
+        me._handleDelete(me.delete);
       }
 
       _handleCancel(e) {
@@ -395,7 +499,6 @@ Wham! It's all awesome now!
           }
         }
         me.$.grid.expandedItems = [];
-        me._editButtons("show");
       }
 
       _handleSave(e) {
@@ -407,9 +510,6 @@ Wham! It's all awesome now!
 
         if (me.useSlot == "false") {
           // Set items into the return object
-          //  NOTE:  Maybe loop over columnArray and only get those items from formData.
-          //  IDEA:  Maybe we have hidden items in the columnArray -- such as the id ect.
-
           // Get rid of undefined key value pairs from grid.
           for (var key in formData) {
             if (typeof formData[key] != 'undefined') {
@@ -446,20 +546,144 @@ Wham! It's all awesome now!
         var request = crudAjax.generateRequest();
 
         request.completes.then(function(req) {
-            //e.model.items = req.response.payload;
-            console.log(e.model.items);
-            //me.data[req.response.payload.index] = e.model.items;
+            if (req.response.success === true) {
+
+              me._closeDialog();
+              me._closeAllExpanded();
+              me.$.grid.clearCache();
+
+              var item = e.model.item;
+              var newItem = $.extend(item, req.response.payload[0]);
+
+              Array.prototype.forEach.call(Polymer.dom(me.$.grid.$.items).children, function(row) {
+                if (row.item === item) {
+                    me.$.grid.clearCache();
+                    me.$.grid.items[row.index] = newItem;
+                    me.$.grid._updateItem(row, newItem);
+                }
+              });
+
+            } else {
+              var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+              var error = Polymer.dom(me.root).querySelector("#error-content");
+              var spinner = Polymer.dom(me.root).querySelector('#spinner');
+              error.innerHTML = req.response.errors[0].msg;
+              errDialog.open();
+              spinner.removeAttribute("active");
+              return;
+            }
           }, function(rejected) {
             // failed request, argument is an object
             let req = rejected.request;
-            let error = rejected.error;
-            console.log("FAILED",error)
-            //...
+            let err = rejected.error;
+            var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+            var error = Polymer.dom(me.root).querySelector("#error-content");
+            var spinner = Polymer.dom(me.root).querySelector('#spinner');
+            error.innerHTML = "Failed Request!";
+            errDialog.open();
+            spinner.removeAttribute("active");
           });
 
-        me._closeAllExpanded();
-        me.$.grid.clearCache();
-        me.$.grid._gridResizeHandler();
+
+      }
+
+      _areYouSure(e) {
+        var me = this;
+        me.delete = {};
+        me.delete.model = e.model;
+        var areYouSureDialog = me.$.areYouSureDialog;
+        var message = Polymer.dom(me.root).querySelector("#are-you-sure-content");
+        message.innerHTML = "Are you sure you want to delete this record? ";
+        areYouSureDialog.open();
+      }
+
+      _handleDelete(e) {
+        var me = this;
+        var form = Polymer.dom(me.root).querySelector('#srch-grid-iron-form');
+        var formData = form.serializeForm();
+
+        var ajaxData = me.delete.model.item;
+
+        if (me.useSlot == "false") {
+          // Set items into the return object
+          // Get rid of undefined key value pairs from grid.
+          for (var key in formData) {
+            if (typeof formData[key] != 'undefined') {
+              // Overwrite edits from the form data.
+              ajaxData[key] = formData[key];
+            }
+          }
+
+        } else {
+          var slot = Polymer.dom(me.root).querySelector('#custom-edit-expand-slot');
+          var nodes = slot.assignedNodes();
+          var form = Polymer.dom(nodes[0]).querySelector('#custom-edit-expand-slot-form');
+          var formData = form.serializeForm();
+
+          for (var key in formData) {
+            if (typeof formData[key] != 'undefined') {
+              // Overwrite edits from the form data.
+              ajaxData[key] = formData[key];
+            }
+          }
+
+          console.log("FORM DATA",formData, slot, nodes);
+          for (var i=0; i < nodes.length; i++) {
+            console.log("NODE",nodes[i]);
+          }
+
+        }
+
+        var crudAjax = Polymer.dom(me.root).querySelector('#crud-ajax');
+        crudAjax.url = me.url;
+        ajaxData['xaction'] = 'delete';
+        crudAjax.params = ajaxData;
+
+        var request = crudAjax.generateRequest();
+
+        request.completes.then(function(req) {
+            if (req.response.success === true) {
+
+              me._closeDialog();
+              me._closeAllExpanded();
+              me.$.grid.clearCache();
+
+              var item = e.model.item;
+              // var newItem = $.extend(item, req.response.payload[0]);
+
+              Array.prototype.forEach.call(Polymer.dom(me.$.grid.$.items).children, function(row) {
+                if (row.item === item) {
+                    me.$.grid.clearCache();
+                    me.$.grid.items.splice(row.index, 1);
+                    var page = me.$.grid._getPageForIndex(row.index);
+                    me.$.grid._loadPage(page);
+                    me.$.grid.clearCache();
+                    me.$.areYouSureDialog.close();
+                }
+              });
+
+            } else {
+              var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+              var error = Polymer.dom(me.root).querySelector("#error-content");
+              var spinner = Polymer.dom(me.root).querySelector('#spinner');
+              error.innerHTML = req.response.errors[0].msg;
+              errDialog.open();
+              spinner.removeAttribute("active");
+              return;
+            }
+          }, function(rejected) {
+            // failed request, argument is an object
+            let req = rejected.request;
+            let err = rejected.error;
+            var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+            var error = Polymer.dom(me.root).querySelector("#error-content");
+            var spinner = Polymer.dom(me.root).querySelector('#spinner');
+            error.innerHTML = "Failed Request!";
+            errDialog.open();
+            spinner.removeAttribute("active");
+          });
+
+
       }
 
       _handleResponse(e) {
@@ -467,7 +691,19 @@ Wham! It's all awesome now!
         var config = this.mainChartConfig;
         var i = 0;
 
-        me.data = e.detail.response.payload;
+        if (e.detail.response.success === true) {
+          me.data = e.detail.response.payload;
+        } else {
+          var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+          var error = Polymer.dom(me.root).querySelector("#error-content");
+          var spinner = Polymer.dom(me.root).querySelector('#spinner');
+          error.innerHTML = e.detail.response.errors[0].msg;
+          errDialog.open();
+          spinner.removeAttribute("active");
+
+          return;
+        }
+
 
         // Check to see if they have edit on any items in the list.
         // If they do then set Add option on.
@@ -508,7 +744,11 @@ Wham! It's all awesome now!
 
       _getItemValue(col, item){
         if(item !== null && typeof item != 'undefined'){
-            return item[col];
+          if(typeof col.grid_display_field !== 'undefined' && col.grid_display_field.length > 0) {
+            return item[col.grid_display_field];
+          } else {
+            return item[col.name];
+          }
         }
       }
 
@@ -527,22 +767,18 @@ Wham! It's all awesome now!
         return idArray;
       }
 
-      _editButtons(action) {
-        var me = this;
-        for (var index = 0; index < me.data.length; ++index) {
-          var editBtn = Polymer.dom(me.root).querySelector("#edit-"+me.data[index].__edit_unique_id__);
-          if (editBtn != null && typeof editBtn !== 'undefined') {
-            if (action == "hide") {
-              editBtn.hidden = true;
-            } else {
-              editBtn.hidden = false;
-            }
-          }
-        }
-      }
-
       _handleAddCancel() {
         var dialog = Polymer.dom(this.root).querySelector("#addDialog");
+        dialog.close();
+      }
+
+      _handleErrClose() {
+        var dialog = Polymer.dom(this.root).querySelector("#errorDialog");
+        dialog.close();
+      }
+
+      _closeAreYouSure() {
+        var dialog = Polymer.dom(this.root).querySelector("#areYouSure");
         dialog.close();
       }
 
@@ -553,7 +789,6 @@ Wham! It's all awesome now!
 
       _handleAdd(e) {
         var me = this;
-
 
         if (me.useSlot == "false") {
           var form = Polymer.dom(me.root).querySelector('#srch-grid-iron-form-add');
@@ -594,21 +829,44 @@ Wham! It's all awesome now!
         var request = crudAjax.generateRequest();
 
         request.completes.then(function(req) {
-            //e.model.items = req.response.payload;
-            console.log(req);
-            me._closeDialog();
+            if (req.response.success === true) {
+              me._closeDialog();
+              me._closeAllExpanded();
+              me.$.grid.clearCache();
+
+              var item = {};
+              var newItem = $.extend(item, req.response.payload[0]);
+
+              me.$.grid.clearCache();
+              me.data.splice(0,0,newItem);
+              me.$.grid.clearCache();
+              me.$.grid._gridResizeHandler();
+
+              // TODO: Add a success toast here...
+            } else {
+              var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+              var error = Polymer.dom(me.root).querySelector("#error-content");
+              var spinner = Polymer.dom(me.root).querySelector('#spinner');
+              error.innerHTML = req.response.errors[0].msg;
+              errDialog.open();
+              spinner.removeAttribute("active");
+
+              return;
+            }
+
             //me.data[req.response.payload.index] = e.model.items;
           }, function(rejected) {
             // failed request, argument is an object
             let req = rejected.request;
-            let error = rejected.error;
-            console.log("FAILED",error)
+            let err = rejected.error;
+            var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+            var error = Polymer.dom(me.root).querySelector("#error-content");
+            var spinner = Polymer.dom(me.root).querySelector('#spinner');
+            error.innerHTML = "Failed Request!";
+            errDialog.open();
+            spinner.removeAttribute("active");
             //...
           });
-
-        me._closeAllExpanded();
-        me.$.grid.clearCache();
-        me.$.grid._gridResizeHandler();
       }
 
       _addClick(e) {
@@ -625,10 +883,9 @@ Wham! It's all awesome now!
 
         if (me.useSlot == "false") {
 
-          //me._editButtons("hide");
           for (var index = 0; index < me.columnArray.length; ++index) {
             var item = [{}];
-            var input = me._createInputObj(index, addDiv, item, false);
+            var input = me._createInputObj(index, addDiv, item, false, "add");
           }
         } else {
           var slot = Polymer.dom(me.root).querySelector('#custom-add-expand-slot');
@@ -650,9 +907,27 @@ Wham! It's all awesome now!
         var me = this;
         var item = e.model.item;
 
-        // First, hide all other edit buttons
-        me._editButtons("hide");
-        // Expand this row.
+        // TODO:  Do a quick AJAX call here to get the most updated record/item???
+        //        Others may have modified the record if it has been sitting in the list too long...
+
+        // Close any expanded Items first
+        if (typeof me.$.grid.expandedItems[0] !== 'undefined'
+            && me.$.grid.expandedItems.length > 0) {
+          me.model = {};
+          me.model.item = me.$.grid.expandedItems[0];
+
+          me._handleCancel(me);
+          me.$.grid.clearCache();
+          me.$.grid._gridResizeHandler();
+          me.$.grid.expandedItems = [];
+
+          // Needed this short timeout in order to simulate edit click.
+          var timer = setTimeout(function(){
+            window.clearTimeout(timer);
+            me._editClick(e);
+          }, 5);
+          return;
+        }
 
         me.$.grid.expandedItems = [item];
         var idArray = me._hideShowColumns(item, "hide");
@@ -669,7 +944,7 @@ Wham! It's all awesome now!
                   $(editdiv).removeClass("col-md-4");
                   $(editdiv).addClass(me.columnArray[index].edit_bootstrap_class);
                 }
-                me._createInputObj(index, editdiv, item, true);
+                me._createInputObj(index, editdiv, item, true, "edit");
           }
         } else {
           // Use the custom slot that they have provided.
@@ -692,56 +967,71 @@ Wham! It's all awesome now!
         grid._gridResizeHandler();
       }
 
-      _createInputObj(index, editdiv, item, preload) {
+      _createInputObj(index, editdiv, item, preload, mode) {
         var me = this;
-              switch(me.columnArray[index].edit_type) {
-                  case 'multi-combo':
-                      var combo = document.createElement('wt-vaadin-multi-combo');
-                      combo.label = "Select "+me.columnArray[index].description+"(s)";
-                      combo.name = me.columnArray[index].name;
-                      me._generateComboRequest(combo, index, editdiv, item, preload);
-                      combo.addEventListener('value-changed', function(e) {
-                        var grid = Polymer.dom(me.root).querySelector('#grid');
-                        grid._gridResizeHandler();
-                      });
-                      break;
-                  case 'combo':
-                      var combo = document.createElement('vaadin-combo-box');
-                      combo.label = "Select "+me.columnArray[index].description+"";
-                      combo.name = me.columnArray[index].name;
-                      me._generateComboRequest(combo, index, editdiv, item, preload);
-                      break;
-                  case 'input':
-                      var input = document.createElement('paper-input');
-                      input.label = "Enter "+me.columnArray[index].description+"";
-                      input.name = me.columnArray[index].name;
-                      if (preload) {
-                          input.value = item[me.columnArray[index].name];
-                      }
-                      $(editdiv).append(input);
-                      break;
-                  case 'textarea':
-                      var input = document.createElement('paper-textarea');
-                      input.label = "Enter "+me.columnArray[index].description+"";
-                      input.name = me.columnArray[index].name;
-                      if (preload) {
-                        input.value = item[me.columnArray[index].name];
-                      }
-                      break;
-                  default:
-                      var input = document.createElement('paper-input');
-                      input.readonly = true;
-                      input.label = "Enter "+me.columnArray[index].description+"";
-                      input.name = me.columnArray[index].name;
-                      if (preload) {
-                        input.value = item[me.columnArray[index].name];
-                      }
-                      $(editdiv).append(input);
+        var switchStr = me.columnArray[index].edit_type;
+
+        // Check columnArray to see if we need to go 'readonly' on any of the columns
+        // based on the "addmode" / "editmode" attributes.
+        if (mode === "add" && me.columnArray[index].addmode === "readonly") {
+          switchStr = "readonly";
+        } else if (mode === "edit" && me.columnArray[index].editmode === "readonly") {
+          switchStr = "readonly";
+        }
+
+        // TODO:  We could implement field level security here...
+        //        Based on flags sent from the server.
+        //        Example:  "phone_number" could have another field called
+        //                  "phone_number__readonly" which could be it's flag for readonly.
+
+        switch(switchStr) {
+            case 'multi-combo':
+                var combo = document.createElement('wt-vaadin-multi-combo');
+                combo.label = "Select "+me.columnArray[index].description+"(s)";
+                combo.name = me.columnArray[index].name;
+                me._generateComboRequest(combo, index, editdiv, item, preload);
+                combo.addEventListener('value-changed', function(e) {
+                  var grid = Polymer.dom(me.root).querySelector('#grid');
+                  grid._gridResizeHandler();
+                });
+                break;
+            case 'combo':
+                var combo = document.createElement('vaadin-combo-box');
+                combo.label = "Select "+me.columnArray[index].description+"";
+                combo.name = me.columnArray[index].name;
+                me._generateComboRequest(combo, index, editdiv, item, preload);
+                break;
+            case 'input':
+                var input = document.createElement('paper-input');
+                input.label = "Enter "+me.columnArray[index].description+"";
+                input.name = me.columnArray[index].name;
+                if (preload) {
+                    input.value = item[me.columnArray[index].name];
+                }
+                $(editdiv).append(input);
+                break;
+            case 'textarea':
+                var input = document.createElement('paper-textarea');
+                input.label = "Enter "+me.columnArray[index].description+"";
+                input.name = me.columnArray[index].name;
+                if (preload) {
+                  input.value = item[me.columnArray[index].name];
+                }
+                break;
+            default:
+                var input = document.createElement('paper-input');
+                input.readonly = true;
+                input.label = "Enter "+me.columnArray[index].description+"";
+                input.name = me.columnArray[index].name;
+                if (preload) {
+                  input.value = item[me.columnArray[index].name];
+                }
+                $(editdiv).append(input);
               }
-              if (typeof input === 'undefined') {
-                return combo;
-              }
-              return input;
+            if (typeof input === 'undefined') {
+              return combo;
+            }
+            return input;
       }
 
       _generateComboRequest(combo, index, editdiv, item, preload) {
