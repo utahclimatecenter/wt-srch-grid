@@ -25,7 +25,44 @@
   </head>
   <body>
     <div class="vertical-section-container centered900">
-      <h3>Basic wt-srch-bar demo</h3>
+      <h3>wt-srch-grid demo with basic search bar only</h3>
+      <demo-snippet>
+        <template>
+        <wt-srch-grid
+          id="wt-srch-grid"
+          title="wt-srch-grig example"
+          download-fields='{"name": "Name", "holiday": "Holiday", "sched_type":"Schedule Type", "lv_hours": "Leave Hours Entered"}'
+          column-array='[{
+                          "index": "index",
+                          "name": "name",
+                          "description": "Name",
+                          "href": "https:\/\/www.google.com",
+                          "params": { "programId": "pa_program_id"},
+                          "sort": "asc",
+                          "target": ""
+                        },
+                        {
+                          "index": "index",
+                          "name": "address",
+                          "description": "Address",
+                          "href": "",
+                          "sort": "asc",
+                          "target": ""
+                        }
+                        ]'
+          url="./data/flat_data.txt"
+          wt-srch-bar-filter-types-url="./data/master-combo.txt"
+          wt-srch-bar-default-srch="free-text"
+          wt-srch-bar-default-srch-label="Program Search"
+          wt-srch-bar-char-min-ajax="2"
+          wt-srch-bar-hide-filter="true">
+        </wt-srch-grid>
+        </template>
+      </demo-snippet>
+
+
+
+      <h3>wt-srch-grid demo with search bar and filters</h3>
       <demo-snippet>
         <template>
         <wt-srch-grid
@@ -59,7 +96,7 @@
         </template>
       </demo-snippet>
 
-      <h3>Editable wt-srch-bar Demo</h3>
+      <h3>Editable wt-srch-grid demo</h3>
       <demo-snippet>
         <template>
         <wt-srch-grid
@@ -98,7 +135,7 @@
         </template>
       </demo-snippet>
 
-      <h3>Editable wt-srch-bar Demo (Using custom edit/add Slots)</h3>
+      <h3>Editable wt-srch-grid Demo (Using custom edit/add Slots)</h3>
       <demo-snippet>
         <template>
         <wt-srch-grid
