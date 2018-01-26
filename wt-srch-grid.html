@@ -190,7 +190,8 @@ Wham! It's all awesome now!
       default-srch-label={{wtSrchBarDefaultSrchLabel}}
       filter-types-url="{{wtSrchBarFilterTypesUrl}}"
       start-date="{{startDate}}"
-      end-date="{{endDate}}"></wt-srch-bar>
+      end-date="{{endDate}}"
+      hide-filter="{{wtSrchBarHideFilter}}"></wt-srch-bar>
       <div>
           <center><paper-spinner style="" id="spinner"></paper-spinner></center>
       </div>
@@ -327,6 +328,10 @@ Wham! It's all awesome now!
             wtSrchBarDefaultSrch: String,
             wtSrchBarDefaultSrchLabel: String,
             wtSrchBarCharMinAjax: String,
+            wtSrchBarHideFilter: {
+              type: String,
+              value: "false"
+            },
             columnArray: {
                 type: Array,
                 value: [],
