@@ -17,6 +17,7 @@
 <link rel="import" href="../vaadin-grid/vaadin-grid-sorter.html">
 <link rel="import" href="../wt-srch-bar/wt-srch-bar.html">
 <link rel="import" href="../wt-vaadin-multi-combo/wt-vaadin-multi-combo.html">
+<link rel="import" href="../wt-breadcrumb/wt-breadcrumb.html">
 
 
 <!--
@@ -33,7 +34,7 @@ Wham! It's all awesome now!
       :host {
         display: block;
         background-color: #ffffff;
-        padding: 10px;
+        /*padding: 10px;*/
       }
 
       .clearfix:after {
@@ -158,6 +159,47 @@ Wham! It's all awesome now!
     box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
     }
 
+    #pages {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 20px;
+    }
+
+    #pages > button {
+      user-select: none;
+      padding: 5px;
+      margin: 0 5px;
+      border-radius: 10%;
+      border: 0;
+      background: transparent;
+      font: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #pages > button:hover,
+    #pages > button:focus {
+      color: var(--default-primary-color);
+      background-color: #eee;
+    }
+
+    #pages > button[selected] {
+      font-weight: bold;
+      color: white;
+      background-color: var(--default-primary-color);
+    }
+
+
+/*    [hoverText]:hover::after {
+      content: attr(hoverText);
+      position: relative;
+      right: 0;
+      top: 0;
+      transform: translate(0, -100%);
+      background-color: #fff;
+      border: solid 1px #ccc;
+      padding: 5px;
+    }*/
 
     </style>
 
@@ -170,7 +212,25 @@ Wham! It's all awesome now!
       on-response="_handleResponse"></iron-ajax>
 
     <iron-ajax
+      id="column-ajax"
+      headers='{"X-Requested-With": "XMLHttpRequest"}'
+      handle-as="json"
+      headers='{"Cache-control": "no-cache"}'></iron-ajax>
+
+    <iron-ajax
+      id="breadcrumb-ajax"
+      headers='{"X-Requested-With": "XMLHttpRequest"}'
+      handle-as="json"
+      headers='{"Cache-control": "no-cache"}'></iron-ajax>
+
+    <iron-ajax
       id="edit-ajax"
+      headers='{"X-Requested-With": "XMLHttpRequest"}'
+      handle-as="json"
+      headers='{"Cache-control": "no-cache"}'></iron-ajax>
+
+    <iron-ajax
+      id="icon-ajax"
       headers='{"X-Requested-With": "XMLHttpRequest"}'
       handle-as="json"
       headers='{"Cache-control": "no-cache"}'></iron-ajax>
@@ -192,10 +252,8 @@ Wham! It's all awesome now!
       start-date="{{startDate}}"
       end-date="{{endDate}}"
       hide-filter="{{wtSrchBarHideFilter}}"></wt-srch-bar>
-      <div>
-          <center><paper-spinner style="" id="spinner"></paper-spinner></center>
-      </div>
-
+      <center><paper-spinner style="" id="spinner"></paper-spinner></center>
+      <wt-breadcrumb items={{breadcrumbArray}}></wt-breadcrumb>
           <paper-dialog id="addDialog" modal closed>
               <paper-icon-button id="close-dialog" icon="close" on-click="_handleAddCancel"  title="Close"></paper-icon-button>
             <div class="details2 clearfix">
@@ -217,7 +275,7 @@ Wham! It's all awesome now!
             <br>
           </paper-dialog>
 
-          <vaadin-grid aria-label="Sorting Example" items="[[data]]" style="height: [[height]]" multi-sort="[[multiSort]]" id="grid">
+          <vaadin-grid aria-label="Sorting Example" items="[[data]]" style="height: [[height]]" multi-sort="[[multiSort]]" id="grid" page-size="[[pageSize]]">
 
             <template class="row-details">
             <iron-form id="srch-grid-iron-form">
@@ -246,10 +304,7 @@ Wham! It's all awesome now!
             </iron-form>
             </template>
 
-       <!--  <template class="header">Username</template> -->
             <template id="repeater" is="dom-repeat" items="{{columnArray}}" as="column">
-
-
 
               <vaadin-grid-column>
                 <template class="header">
@@ -259,10 +314,19 @@ Wham! It's all awesome now!
                 </template>
 
                 <template is="dom-if" if="[[_checkHref(column.href)]]">
-                    <template><a title="" id="[[column.name]]-[[item.__edit_unique_id__]]" href="[[column.href]]/#/[[_getHashPath(column, item)]]" target="_self">{{_getItemValue(column, item)}}</a></template>
+                    <template>
+                      <a title="" id="[[column.name]]-[[item.__edit_unique_id__]]" href="[[column.href]]/#/[[_getHashPath(column, item)]]" target="_self">{{_getItemValue(column, item)}}</a>
+                    </template>
                 </template>
                 <template is="dom-if" if="[[!_checkHref(column.href)]]">
-                    <template><div title="" id="[[column.name]]-[[item.__edit_unique_id__]]">{{_getItemValue(column, item)}}</div></template>
+                  <template>
+                    <template is="dom-if" if="[[_checkIconAction(column.icon_action)]]">
+                      <paper-icon-button id="action-[[item.__edit_unique_id__]]" icon="[[item.icon]]" on-click="_iconClicked"></paper-icon-button>
+                    </template>
+                    <template is="dom-if" if="[[!_checkIconAction(column.icon_action)]]">
+                      <div title="" id="[[column.name]]-[[item.__edit_unique_id__]]">{{_getItemValue(column, item)}}</div>
+                    </template>
+                  </template>
                 </template>
               </vaadin-grid-column>
 
@@ -278,6 +342,13 @@ Wham! It's all awesome now!
             </vaadin-grid-column>
 
           </vaadin-grid>
+          <div id="pages" style="display: none">
+            <button on-click="_prev">&lt;</button>
+            <template is="dom-repeat" items="[[pages]]">
+                <button hoverText="blah" on-click="_select" selected$="[[_isSelected(page, item)]]">[[item]]</button>
+            </template>
+            <button on-click="_next">&gt;</button>
+          </div>
       <br>
 
       <paper-dialog id="errorDialog" class="colored" closed>
@@ -305,7 +376,6 @@ Wham! It's all awesome now!
     class WtSrchGrid extends Polymer.Element {
       static get is() { return 'wt-srch-grid'; }
 
-
       static get properties() {
         return {
             url: String,
@@ -332,10 +402,23 @@ Wham! It's all awesome now!
               type: String,
               value: "false"
             },
+            columnArrayUrl: {
+              type: String,
+              value: null
+            },
             columnArray: {
                 type: Array,
                 value: [],
-                reflectToAttribute: true
+                reflectToAttribute: true,
+                notify: true,                 // A notifying property supports upward data flow.
+                                              //  By default, properties are non-notifying, and
+                                              //  don't support upward data flow.
+
+                readOnly: false               // A read-only property prevents downward data flow.
+                                              //  By default, properties are read/write, and
+                                              //  support downward data flow
+
+                // See:  https://www.polymer-project.org/2.0/docs/devguide/data-system#make-observable-changes  -- For how notify & readOnly work..
             },
             useSlot: {
               type: String,
@@ -343,13 +426,33 @@ Wham! It's all awesome now!
             },
             startDate: String,
             endDate: String,
+            breadcrumbArray: {
+              type: Array,
+              value: []
+            },
+            breadcrumbUrl: {
+              type: String,
+              value: "None"
+            },
+            breadcrumbColumn: {
+              type: String,
+              value: undefined
+            },
+            pageSize: {
+              type: String,
+              value: "10"
+            }
         };
+      }
+
+      static get observers() {
+        return ['_itemsChanged(data, page)'];
       }
 
       constructor() {
         super();
         this.formLookup = [];
-
+        this.page = 0;
       }
 
 
@@ -361,6 +464,7 @@ Wham! It's all awesome now!
         me.multiSort = true;
         me.allowAdd = false;
 
+
         if (me.gridHeight == "dynamic") {
           me._resize(true);
         }
@@ -371,11 +475,6 @@ Wham! It's all awesome now!
           me._resize(true);
         });
 
-
-        if (me.autoLoadUrl == "true") {
-          me._generateMainUrlAjax();
-        }
-
         me.addEventListener('main-srch-field-changed', function(e){
           me._generateMainUrlAjax(e);
         });
@@ -384,6 +483,14 @@ Wham! It's all awesome now!
           me._generateMainUrlAjax(e);
           me._resize(true);
         });
+
+        me.addEventListener('wt-breadcrumb-clicked', function(e){
+          //me._generateMainUrlAjax(null, e.detail.item.url_path);
+          this.page = 0;
+          me._generateColumnAjax(null,e.detail.item.url_path);
+          me._resize(true);
+        });
+
 
         // Take care of weird z-index problem with iron-overlay-opened and paper-dialog.
         me.$.addDialog.addEventListener('iron-overlay-opened', function(e, a, b, c) {
@@ -409,25 +516,14 @@ Wham! It's all awesome now!
           $("iron-overlay-backdrop").css('position', 'unset');
         });
 
-                // Take care of weird z-index problem with iron-overlay-opened and paper-dialog.
-        // me.$.errorDialog.addEventListener('iron-overlay-opened', function(e, a, b, c) {
-        //   var backdrop = $("iron-overlay-backdrop");
-        //     backdrop.css('z-index', 0);
-        //     backdrop.css('position', 'unset');
-        // });
+        // Save this off for later use.
+        me.origColumnArray = me.columnArray.slice(0);
 
-        // me.$.errorDialog.addEventListener('iron-overlay-opened', function(e) {
-        //   $("iron-overlay-backdrop").css('z-index', 0);
-        //   $("iron-overlay-backdrop").css('position', 'unset');
-        // });
-
-        //me._handleAddCancel();
-
-        // NOTE:  We need to go to Vaadin Grid 4.0 to get this event...
-        // me.addEventListener('direction-changed', function(e){
-        //   console.log("DIR CHANGED")
-        //   me._closeAllExpanded();
-        // });
+        // No dynamic columns -- check to see if they want to autoload the main url.
+        if (me.autoLoadUrl == "true") {
+          //me._generateMainUrlAjax();
+          me._generateColumnAjax(null,"");
+        }
 
       }
 
@@ -437,11 +533,19 @@ Wham! It's all awesome now!
 
       _resize(reload) {
         var me = this;
+        var pageBar = Polymer.dom(me.root).querySelector('#pages');
         if (me.gridHeight == "dynamic") {
           // Set the height to take the full size of the window minus the header.
           me.height = $(window).height();
           me.header = me.$.grid.getBoundingClientRect().top;
-          me.gridSize = parseInt(me.height)- me.header - 50;
+          if (typeof me.pages != 'undefined' && me.pages.length > 1) {
+            me.gridSize = parseInt(me.height)- me.header - 100;
+            pageBar.style.display = "block";
+          } else {
+            pageBar.style.display = "none";
+            me.gridSize = parseInt(me.height)- me.header - 50;
+          }
+
           me.$.grid.style = "height: "+ me.gridSize+"px";
           me.$.grid.clearCache();
           me.$.grid._gridResizeHandler();
@@ -450,25 +554,113 @@ Wham! It's all awesome now!
         }
       }
 
-      _generateMainUrlAjax(e) {
+      _generateColumnAjax(e, urlPath) {
+        var me = this;
+        var columnAjax = Polymer.dom(me.root).querySelector('#column-ajax');
+        columnAjax.url = me.columnArrayUrl;
+
+        columnAjax.params['xaction'] = "get-columns";
+        columnAjax.params['url_path'] = urlPath;
+
+        var request = columnAjax.generateRequest();
+
+        request.completes.then(function(req) {
+              // Restore the original column Array
+              me.columnArray = me.origColumnArray.slice(0);
+
+              // Push the payload onto the column Array
+              if (typeof req.response.payload !== 'undefined') {
+                for (var i=0; i < req.response.payload.length; i++) {
+
+                  // Use special Polymer push rather than javascripts Array.push
+                  //  So that it will be an observable change to polymer and
+                  //  force a re-stamp of the DOM.
+                  me.push('columnArray', req.response.payload[i]);
+                  me.$.grid.items = [];
+                }
+              }
+
+              if (me.autoLoadUrl == "true") {
+                me._generateMainUrlAjax(e,urlPath);
+              }
+            }, function(rejected) {
+              // failed request, argument is an object
+              let req = rejected.request;
+              let error = rejected.error;
+              console.log("FAILED",error)
+              //...
+            }
+          );
+      }
+
+      _breadcrumbAjax(urlPath) {
+        var me = this;
+        var bAjax = Polymer.dom(me.root).querySelector('#breadcrumb-ajax');
+        bAjax.url = me.breadcrumbUrl;
+
+        if (typeof urlPath != 'undefined') {
+          bAjax.params['xaction'] = "get-breadcrumbs";
+          bAjax.params['url_path'] = urlPath;
+          var request = bAjax.generateRequest();
+
+          request.completes.then(function(req) {
+                if ( req.response.success == true) {
+                  if (typeof req.response.payload !== 'undefined') {
+                    me.breadcrumbArray = req.response.payload
+                  }
+                } else {
+                  // TODO:  Fix error handling to use our own wt-error object.
+                  var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
+                  var error = Polymer.dom(me.root).querySelector("#error-content");
+                  error.innerHTML = req.response.errors[0].msg;
+                  errDialog.open();
+                  return;
+                }
+              }, function(rejected) {
+                // failed request, argument is an object
+                let req = rejected.request;
+                let error = rejected.error;
+                console.log("FAILED",error)
+                //...
+              }
+            );
+        }
+
+      }
+
+      _generateMainUrlAjax(e, urlPath) {
         var me = this;
         var ajax = Polymer.dom(this.root).querySelector('#ajax');
         var spinner = Polymer.dom(this.root).querySelector('#spinner');
         me._closeAllExpanded();
 
-        if (typeof e !== 'undefined') {
+        if (typeof e !== 'undefined' && e != null) {
           ajax.params = e.detail.formData;
           me.srchForm = e.detail.formData;
           me.formLookup.push(e.item);
+        } else {
+          ajax.params = [];
         }
 
         ajax.params['xaction'] = "get-grid-data";
+        if (typeof urlPath !== 'undefined') {
+          ajax.params['url_path'] = urlPath;
+        }
         me.ajax = ajax;
 
         // Abort in-flight ajax request if there is some
         if (typeof ajax.lastRequest !== 'undefined') {
           ajax.lastRequest.abort();
         }
+
+        // Send off for breadcrumbs if the Url is defined.
+        if (me.breadcrumbUrl !== 'None') {
+          me._breadcrumbAjax(urlPath);
+        }
+        // See if they want dynamic columns
+        // if (me.columnArrayUrl != null && typeof urlPath != 'undefined') {
+        //   me._generateColumnAjax(null,urlPath);
+        // }
 
         spinner.setAttribute("active", "");
         ajax.generateRequest();
@@ -698,6 +890,7 @@ Wham! It's all awesome now!
 
         if (e.detail.response.success === true) {
           me.data = e.detail.response.payload;
+          me._resize(true);
         } else {
           var errDialog = Polymer.dom(me.root).querySelector("#errorDialog");
           var error = Polymer.dom(me.root).querySelector("#error-content");
@@ -733,7 +926,15 @@ Wham! It's all awesome now!
 
       _checkHref(href){
         //console.log("Href: ", href);
-        if(href.length > 0){
+        if(typeof href != 'undefined' && href.length > 0){
+            return true;
+        }
+        return false;
+      }
+
+      _checkIconAction(iconAction){
+        //console.log("Href: ", href);
+        if(typeof iconAction != 'undefined' && iconAction.length > 0){
             return true;
         }
         return false;
@@ -905,6 +1106,60 @@ Wham! It's all awesome now!
               me._generateComboRequest(editObj, index, null, item, false);
             }
           }
+        }
+      }
+
+      // _reloadWithAjax(ajaxObj, column, item) {
+      //   var me = this;
+      //   if (me.breadcrumbUrl !== 'None') {
+      //     var urlPath = item[me.breadcrumbColumn]
+      //     me._breadcrumbAjax(urlPath);
+      //   }
+      //   var spinner = Polymer.dom(me.root).querySelector('#spinner');
+      //   var request = ajaxObj.generateRequest();
+      //   request.completes.then(function(req) {
+      //       me.data = req.response.payload;
+      //       spinner.removeAttribute("active");
+
+      //       // Change bread crumbs here...
+      //     }, function(rejected) {
+      //       // failed request, argument is an object
+      //       let req = rejected.request;
+      //       let error = rejected.error;
+      //       console.log("FAILED",error);
+      //       spinner.removeAttribute("active");
+      //     }
+      //   );
+      // }
+
+      _iconClicked(e){
+        var me = this;
+        var item = e.model.item;
+        var column = e.model.column;
+        var spinner = Polymer.dom(me.root).querySelector('#spinner');
+        spinner.setAttribute("active", "");
+
+        me.dispatchEvent(new CustomEvent('wt-srch-grid-clicked-item', {
+          bubbles: true,
+          composed: true,
+          item: item
+        }));
+
+        if (typeof column.icon_action !== 'undefined' && column.icon_action.length > 0) {
+          var paramStr = me._getParams(column,item);
+          var iconAjax = Polymer.dom(me.root).querySelector('#icon-ajax');
+          iconAjax.url = column.icon_action;
+          iconAjax.url += "?xaction=get-"+item.icon+"&"+paramStr;
+          if (item.icon == 'file-download') {
+            window.open(iconAjax.url);
+            spinner.removeAttribute("active","download.pdf");
+          } else {
+            if (me.breadcrumbUrl !== 'None') {
+              var urlPath = item[me.breadcrumbColumn]
+              me._generateColumnAjax(null,urlPath);
+            }
+          }
+
         }
       }
 
@@ -1098,7 +1353,6 @@ Wham! It's all awesome now!
             for (var key in column.params) {
                 if (column.params.hasOwnProperty(key)) {
                     returnString += key + "=" + item[column.params[key]] + "&";
-                    // console.log(key + "=" + column.params[key] + "&");
                 }
             }
             return returnString;
@@ -1107,23 +1361,55 @@ Wham! It's all awesome now!
 
 
       _getHashPath(column, item){
-	if(typeof column.hashpath != 'undefined') {
-        if(item !== null && typeof item != 'undefined'){
-            var returnString = "";
-            var hashColumns = column.hashpath.split('#-');
+      	if(typeof column.hashpath != 'undefined') {
+            if(item !== null && typeof item != 'undefined'){
+                var returnString = "";
+                var hashColumns = column.hashpath.split('#-');
 
-            for (var key in hashColumns) {
-              var val = hashColumns[key];
-              var re = new RegExp('-#', 'gi');
-              if (val.match(re)) {
-                var k = val.split('-#');
-                var val = item[k[0]];
-              }
-              returnString += val;
+                for (var key in hashColumns) {
+                  var val = hashColumns[key];
+                  var re = new RegExp('-#', 'gi');
+                  if (val.match(re)) {
+                    var k = val.split('-#');
+                    var val = item[k[0]];
+                  }
+                  returnString += val;
+                }
+                return returnString;
             }
-            return returnString;
+          }
         }
+
+
+      _isSelected(page, item) {
+        return page === item - 1;
+      }
+
+      _select(e) {
+        this.page = e.model.item - 1;
+      }
+
+      _next() {
+        this.page = Math.min(this.pages.length - 1, this.page + 1);
+      }
+
+      _prev() {
+        this.page = Math.max(0, this.page - 1);
+      }
+
+      _itemsChanged(items, page) {
+        if (items === undefined || page === undefined) {
+          return;
         }
+
+        //if (!this.pages) {
+          this.pages = Array
+            .apply(null, {length: Math.ceil(items.length / this.$.grid.pageSize)}).map((item, index) => index + 1);
+        //}
+
+        const start = page * this.$.grid.pageSize;
+        const end = (page + 1) * this.$.grid.pageSize;
+        this.$.grid.items = items.slice(start, end);
       }
 
     }

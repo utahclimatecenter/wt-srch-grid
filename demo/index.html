@@ -31,7 +31,6 @@
         <wt-srch-grid
           id="wt-srch-grid"
           title="wt-srch-grig example"
-          download-fields='{"name": "Name", "holiday": "Holiday", "sched_type":"Schedule Type", "lv_hours": "Leave Hours Entered"}'
           column-array='[{
                           "index": "index",
                           "name": "name",
@@ -68,7 +67,6 @@
         <wt-srch-grid
           id="wt-srch-grid"
           title="wt-srch-grig example"
-          download-fields='{"name": "Name", "holiday": "Holiday", "sched_type":"Schedule Type", "lv_hours": "Leave Hours Entered"}'
           column-array='[{
                           "index": "index",
                           "name": "name",
@@ -199,6 +197,33 @@
               </iron-form>
             </div>
 
+        </wt-srch-grid>
+        </template>
+      </demo-snippet>
+
+
+      <h3>Using column-array-url for dynamic columns & auto loaded main url</h3>
+      <demo-snippet>
+        <template>
+        <wt-srch-grid
+          id="wt-srch-grid"
+          title="wt-srch-grig example"
+          auto-load-url="true"
+          column-array-url="./data/dynamic-columns.txt"
+          column-array='[{
+                "name": "address",
+                "description": "Report Name",
+                "href": "web-components/wt-app-route-starter",
+                "hashpath": "main/report-view1/#-_id-#",
+                "edit_bootstrap_class": "col-md-4",
+                "edit_type": "input"
+              }]'
+          url="./data/flat_data.txt"
+          wt-srch-bar-filter-types-url="./data/master-combo.txt"
+          wt-srch-bar-default-srch="free-text"
+          wt-srch-bar-default-srch-label="Program Search"
+          wt-srch-bar-char-min-ajax="2"
+          wt-srch-bar-hide-filter="true">
         </wt-srch-grid>
         </template>
       </demo-snippet>
