@@ -12,9 +12,9 @@
 <link rel="import" href="../iron-form/iron-form.html">
 
 <link rel="import" href="../wt-bootstrap-styles/wt-bootstrap-styles.html">
-<link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="../vaadin-grid5/vaadin-grid.html">
 <link rel="import" href="../vaadin-combo-box/vaadin-combo-box.html">
-<link rel="import" href="../vaadin-grid/vaadin-grid-sorter.html">
+<link rel="import" href="../vaadin-grid5/vaadin-grid-sorter.html">
 <link rel="import" href="../wt-srch-bar/wt-srch-bar.html">
 <link rel="import" href="../wt-vaadin-multi-combo/wt-vaadin-multi-combo.html">
 <link rel="import" href="../wt-breadcrumb/wt-breadcrumb.html">
@@ -165,7 +165,7 @@ Wham! It's all awesome now!
       margin: 20px;
     }
 
-    #pages > button {
+    #pages > div > button {
       user-select: none;
       padding: 5px;
       margin: 0 5px;
@@ -177,29 +177,33 @@ Wham! It's all awesome now!
       cursor: pointer;
     }
 
-    #pages > button:hover,
-    #pages > button:focus {
+    #pages > div > button:hover,
+    #pages > div > button:focus {
       color: var(--default-primary-color);
       background-color: #eee;
     }
 
-    #pages > button[selected] {
+    #pages > div > button[selected] {
       font-weight: bold;
       color: white;
       background-color: var(--default-primary-color);
     }
 
-
-/*    [hoverText]:hover::after {
-      content: attr(hoverText);
+    [hoverText] {
       position: relative;
+      /*display: table;*/
+    }
+
+    [hoverText]:hover::after {
+      content: attr(hoverText);
+      position: absolute;
       right: 0;
       top: 0;
       transform: translate(0, -100%);
       background-color: #fff;
       border: solid 1px #ccc;
       padding: 5px;
-    }*/
+    }
 
     </style>
 
@@ -343,11 +347,17 @@ Wham! It's all awesome now!
 
           </vaadin-grid>
           <div id="pages" style="display: none">
-            <button on-click="_prev">&lt;</button>
+            <div style="display: inline">
+              <button on-click="_prev">&lt;</button>
+            </div>
             <template is="dom-repeat" items="[[pages]]">
-                <button hoverText="blah" on-click="_select" selected$="[[_isSelected(page, item)]]">[[item]]</button>
+              <div hoverText$="[[_getHoverText(page)]]" style="display: inline">
+                <button on-click="_select" selected$="[[_isSelected(page, item)]]">[[item]]</button>
+              </div>
             </template>
-            <button on-click="_next">&gt;</button>
+            <div style="display: inline">
+              <button on-click="_next">&gt;</button>
+            </div>
           </div>
       <br>
 
@@ -534,6 +544,7 @@ Wham! It's all awesome now!
       _resize(reload) {
         var me = this;
         var pageBar = Polymer.dom(me.root).querySelector('#pages');
+
         if (me.gridHeight == "dynamic") {
           // Set the height to take the full size of the window minus the header.
           me.height = $(window).height();
@@ -1397,18 +1408,34 @@ Wham! It's all awesome now!
         this.page = Math.max(0, this.page - 1);
       }
 
+      _getHoverText(page) {
+        var me = this;
+        // if (typeof me.pageHoverTxtArray[page] != 'undefined') {
+        //   //return this.pages[page].hoverTxt;
+        // }
+
+      }
+
       _itemsChanged(items, page) {
         if (items === undefined || page === undefined) {
           return;
         }
 
-        //if (!this.pages) {
-          this.pages = Array
+        //var items = this.$.grid.items;
+        var grid = this.$.grid;
+        this.pages = Array
             .apply(null, {length: Math.ceil(items.length / this.$.grid.pageSize)}).map((item, index) => index + 1);
-        //}
 
         const start = page * this.$.grid.pageSize;
         const end = (page + 1) * this.$.grid.pageSize;
+
+        // this.pageHoverTxtArray = [];
+        // for (var i=0; i<this.pages.length; i++) {
+        //  this.pages[i]['hoverTxt'] = items[page][grid._sorters[0].path];
+        // }
+
+
+
         this.$.grid.items = items.slice(start, end);
       }
 
